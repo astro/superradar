@@ -5,6 +5,8 @@ var sys = require('sys'),
 
 var db = new sqlite.Database();
 
+db.query("PRAGMA synchronous=OFF", function() { });
+
 db.open("radar.db",
 	function() {
 	  db.query("CREATE TABLE items (serial INTEGER PRIMARY KEY AUTOINCREMENT, rss TEXT, id TEXT, date INT, content TEXT)", [],
