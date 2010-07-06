@@ -8,9 +8,26 @@ process.addListener('uncaughtException', function(e) {
 		    });
 
 var db = new sqlite.Database();
-
 db.query("PRAGMA synchronous=OFF", function() { });
 
+/* max 2 bulk queries are running at a time */
+var bulkQueue = [], bulkPending = 0;
+function bulkQuery(qry, data) {
+  if (bulkPending > 2) {
+    bulkQueue.push({ qry: qry, data: data });
+  } else {
+    db.query(qry, data,
+	     function() {
+	       bulkPending--;
+	       /* Check for queued bulk qrys */
+	       var queued = bulkQueue.shift();
+	       if (queued) {
+		 bulkQuery(queued.qry, queued.data);
+	       }
+	     });
+    bulkPending++;
+  }
+}
 db.open("radar.db",
 	function() {
 	  db.query("CREATE TABLE items (serial INTEGER PRIMARY KEY AUTOINCREMENT, rss TEXT, id TEXT, date INT, content TEXT)", [],
@@ -35,7 +52,6 @@ function setupSuperfeedr() {
 
 
 function padLeft(len, padding, s) {
-  sys.puts("padLeft: "+s);
   s = s.toString();
   while(s.length < len) {
     s = padding + s;
@@ -132,9 +148,8 @@ function onEntries(entries) {
 		      sys.puts("created: "+entry.published);
 		    }
 
-		    db.query("INSERT INTO items (rss, id, date, content) VALUES (?, ?, ?, ?)",
-			     [entry.rss, entry.id, entry.published, JSON.stringify(entry)],
-			     function() { });
+		    bulkQuery("INSERT INTO items (rss, id, date, content) VALUES (?, ?, ?, ?)",
+			      [entry.rss, entry.id, entry.published, JSON.stringify(entry)]);
 		  });
 
   /* Trigger waiting requests */
@@ -153,7 +168,7 @@ function getEntriesSince(since, cb) {
 
   var since_ = Number(since);
   var entries = [];
-  db.query("SELECT serial, content FROM items WHERE serial > ? ORDER BY serial ASC LIMIT 10",
+  db.query("SELECT serial, content FROM items WHERE serial > ? ORDER BY serial DESC LIMIT 100",
 	   [since_], function(error, row) {
 	     if (row) {
 	       /* Row */
