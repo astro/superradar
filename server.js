@@ -102,14 +102,23 @@ function xmlToAuthor(authorEl) {
 
 function onSuperfeedrStanza(stanza) {
   if (stanza.is('message')) {
+    var feedTitle = null;
     var entries = [];
     stanza.getChildren("event").forEach(function(eventEl) {
+      eventEl.getChildren("status").forEach(function(statusEl) {
+        feedTitle = statusEl.getChildText("title");
+	if (feedTitle.toString().length == 0)
+	  feedTitle = null;
+      });
+
       eventEl.getChildren("items").forEach(function(itemsEl) {
 	var node = itemsEl.attrs.node;
 	if (node) {
 	  itemsEl.getChildren("item").forEach(function(itemEl) {
 	    itemEl.getChildren("entry").forEach(function(entryEl) {
-	      var json = {rss: node};
+	      var json = { rss: node };
+	      if (feedTitle)
+		json.feedTitle = feedTitle;
 	      xmlToAttr(entryEl, "id", json);
 	      xmlToAttr(entryEl, "title", json);
 	      xmlToAttr(entryEl, "published", json);
