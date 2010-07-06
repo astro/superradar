@@ -3,6 +3,10 @@ var sys = require('sys'),
   xmpp = require('xmpp'),
   sqlite = require('sqlite');
 
+process.addListener('uncaughtException', function(e) {
+			sys.puts("Uncaught: "+e);
+		    });
+
 var db = new sqlite.Database();
 
 db.query("PRAGMA synchronous=OFF", function() { });
@@ -28,6 +32,30 @@ function setupSuperfeedr() {
 		   });
   conn.addListener('stanza', onSuperfeedrStanza);
 }
+
+
+function padLeft(len, padding, s) {
+  sys.puts("padLeft: "+s);
+  s = s.toString();
+  while(s.length < len) {
+    s = padding + s;
+  }
+  return s;
+}
+Date.prototype.toISO8601 = function() {
+sys.puts("toISO8601 of "+this);
+  var tz = this.getTimezoneOffset();
+  return this.getFullYear() + '-' +
+    padLeft(2, '0', this.getMonth()) + '-' +
+    padLeft(2, '0', this.getDay()) + 'T' +
+    padLeft(2, '0', this.getHours()) + ':' +
+    padLeft(2, '0', this.getMinutes()) + ':' +
+    padLeft(2, '0', this.getSeconds()) +
+    (tz >= 0 ? '+' : '-') +
+    padLeft(2, '0', Math.abs(tz) / 60) + ':' +
+    padLeft(2, '0', Math.abs(tz) % 60);
+};
+
 
 /*** Helpers for ATOM to JSON conversion */
 function xmlToAttr(el, name, json) {
@@ -96,13 +124,18 @@ function onEntries(entries) {
 
   entriesReceived += entries.length;
   entries.forEach(function(entry) {
-    // TODO: 1 transaction for performance
-    db.query("INSERT INTO items (rss, id, date, content) VALUES (?, ?, ?, ?)",
-	     [entry.rss, entry.id, entry.published, JSON.stringify(entry)],
-	     function() {
-	       sys.puts("INSERT -> "+JSON.stringify(arguments));
-	     });
-  });
+		    sys.puts(entry.rss+" "+entry.id+" "+entry.published);
+
+		    if (isNaN(Date.parse(entry.published))) {
+		      /* Fix published date so we have a date at all */
+		      entry.published = new Date().toISO8601();
+		      sys.puts("created: "+entry.published);
+		    }
+
+		    db.query("INSERT INTO items (rss, id, date, content) VALUES (?, ?, ?, ?)",
+			     [entry.rss, entry.id, entry.published, JSON.stringify(entry)],
+			     function() { });
+		  });
 
   /* Trigger waiting requests */
   if (entries.length > 0) {
