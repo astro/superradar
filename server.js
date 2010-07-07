@@ -67,7 +67,7 @@ sys.puts("toISO8601 of "+this);
     padLeft(2, '0', this.getHours()) + ':' +
     padLeft(2, '0', this.getMinutes()) + ':' +
     padLeft(2, '0', this.getSeconds()) +
-    (tz >= 0 ? '+' : '-') +
+    (tz >= 0 ? '-' : '+') +
     padLeft(2, '0', Math.abs(tz) / 60) + ':' +
     padLeft(2, '0', Math.abs(tz) % 60);
 };
