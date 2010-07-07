@@ -1,40 +1,132 @@
+if (!console)
+    var console = {
+	log: function() { }
+    };
+
+function padLeft(len, padding, s) {
+    s = s.toString();
+    while(s.length < len) {
+	s = padding + s;
+    }
+    return s;
+}
+Date.prototype.toHuman = function() {
+    return this.getFullYear() + '-' +
+	padLeft(2, '0', this.getMonth()) + '-' +
+	padLeft(2, '0', this.getDay()) + ' ' +
+	padLeft(2, '0', this.getHours()) + ':' +
+	padLeft(2, '0', this.getMinutes()) + ':' +
+	padLeft(2, '0', this.getSeconds());
+};
+
+var COLOR_OFFSET = 128;
+var COLOR_RANGE = 127;
+function generateColor(s) {
+    var rgb = [0, 0, 0], p = 0;
+    for(var i = 0; i < s.length; i++) {
+	rgb[p] += s.charCodeAt(i);
+	p = (p + 1) % 3;
+    }
+    var r = '#';
+    rgb.forEach(function(c) {
+		    r += padLeft(2, '0', ((c % COLOR_RANGE) + COLOR_OFFSET).toString(16));
+		});
+    return r;
+}
+
+function createEntryParagraph(entry) {
+    var linksByRel = {};
+    entry.links.forEach(
+	function(link) {
+	    if (!linksByRel[link.rel])
+		linksByRel[link.rel] = [];
+	    linksByRel[link.rel].push(link);
+	});
+    relLinks = function(rel) {
+	return linksByRel[rel] || [];
+    };
+
+    var p = $('<p class="entry"></p>');
+
+    /* Add data */
+    p.data('rss', entry.rss);
+    p.data('id', entry.id);
+    p.data('published', Date.parse(entry.published));  // converts to local time
+    p.data('serial', entry.serial);
+
+    /* Add contents */
+    p.attr('style', 'background-color: ' + generateColor(entry.rss));
+    relLinks('image').forEach(
+	function(link) {
+	    var imgEl = $('<img/>');
+	    imgEl.attr('src', link.href);
+	    p.append(imgEl);
+	});	    
+
+    var feedEl = $('<a class="feed"></a>');
+    feedEl.attr('href', entry.rss);
+    feedEl.text(entry.feedTitle ? entry.feedTitle : entry.rss);
+    p.append(feedEl);
+    
+    var dateEl = $('<span class="date"></span>');
+    dateEl.text(new Date(entry.published).toHuman());
+    p.append(dateEl);
+    p.append('<br/>');
+
+    var titleEl = $('<span class="title"></span>');
+    titleEl.text(entry.title);
+    p.append(titleEl);
+    p.append('<br/>');
+
+    relLinks('alternate').forEach(
+	function(link) {
+	    var title = link.title || link.href;
+	    if (title == entry.title)
+		title = link.href;
+	    var linkEl = $('<a class="link"></a>');
+	    linkEl.attr('href', link.href);
+	    linkEl.text(title);
+	    p.append(linkEl);
+	    p.append('<br/>');
+	});    
+    return p;
+}
+
 function receiveContent(content) {
-    console.log("receiveContent "+content.length);
     var entries = JSON.parse(content);
-    var serial = 0;
+    var serial = -1;
     console.log(entries.length + " entries pulled");
 
     /* Add each entry */
     $.map(entries,
 	  function(entry) {
+	      /* TODO: remove dups */
+
+	      /* update max serial */
 	      if (entry.serial > serial)
 		  serial = entry.serial;
+	      /* fix date */
+	      if (isNaN(Date.parse(entry.published)))
+		  entry.published = new Date().toString();
 
-	      var p = $('<p/>');
-	      p.data('rss', entry.rss);
-	      p.data('id', entry.id);
-	      p.data('published', new Date(entry.published));
-	      console.log(entry.published+" -> "+new Date(entry.published));
-	      p.data('serial', entry.serial);
-	      p.text(entry.published+' — '+entry.title);
+	      var p = createEntryParagraph(entry);
 	      p.hide();
 	      var preceding = 'h1', done = false;
-	      $('p').map(function() {
-			     if (!done) {
-				 var p1 = $(this);
-				 var published = p1.data('published');
-				 if (published) {
-				     console.log(published.getTime()+':'+published+' < '+p.data('published').getTime()+':'+p.data('published'));
-				     if (published.getTime() < p.data('published').getTime())
-					 preceding = p1;
-				     else
-					 done = true;
-				 } else {
-				     // FIX:
-				     console.log('p w/o data: '+ps[ps1]);
-				 }
-			     }
-			 });
+	      $('p').each(function() {
+			      if (!done) {
+				  var p1 = $(this);
+				  var published = p1.data('published');
+				  if (published) {
+				      if (published < p.data('published'))
+					  preceding = p1;
+				      else
+					  done = true;
+				  } else {
+				      // FIX:
+				      console.log('p w/o data: '+p1);
+				  }
+			      }
+			  });
 	      p.insertAfter(preceding);
 	      p.slideDown(500);
 	  });
