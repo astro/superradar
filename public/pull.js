@@ -43,7 +43,7 @@ function receiveContent(content) {
     $('p').each(function() {
 		    var p = $(this);
 		    var pSerial = p.data('serial');
-		    if (pSerial && pSerial < serial - 100)
+		    if (pSerial && pSerial <= serial - 100)
 			p.remove();
 		});
 
@@ -51,6 +51,8 @@ function receiveContent(content) {
     window.setTimeout(function() {
 			  pull(serial);
 		      }, 100);
+
+    console.log("amount of p: "+$('p').length);
 }
 
 function pull(serial) {
