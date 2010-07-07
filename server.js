@@ -163,16 +163,12 @@ function onEntries(entries) {
 
   /* Trigger waiting requests */
   if (entries.length > 0) {
-    onUpdateQueue.forEach(function(f) {
-			    sys.puts("onUpdate f()");
-			    f();
-			  });
+    onUpdateQueue.forEach(f);
     onUpdateQueue = [];
   }
 }
 
 function getEntriesSince(since, cb) {
-  sys.puts("getEntriesSince("+since+", "+cb);
   var old_entriesReceived = entriesReceived;
 
   var since_ = Number(since);
@@ -217,6 +213,7 @@ function getEntriesSince(since, cb) {
 /* Web stuff */
 
 require('express');
+use(Logger);
 configure(function(){
 	    set('root', __dirname);
 
