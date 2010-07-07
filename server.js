@@ -183,6 +183,9 @@ function getEntriesSince(since, cb) {
 	       /* Row */
 	       try {
 		 var entry = JSON.parse(row.content);
+		 /* Save bandwidth for this request: */
+		 delete entry.content;
+		 delete entry.summary;
 	       } catch (e) {
 		 sys.puts("Error parsing content: "+e);
 		 sys.puts(row.content);
