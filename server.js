@@ -200,6 +200,11 @@ function onEntries(entries) {
 		    bulkQuery("INSERT INTO items (rss, id, date, content) VALUES (?, ?, ?, ?)",
 			      [entry.rss, entry.id, entry.published, JSON.stringify(entry)]);
 		  });
+  /* For superfeedr there's always 1 notification per rss url */
+  if (entries[0])
+    bulkQuery("DELETE FROM items WHERE rss LIKE ? AND serial < " +
+	      "(SELECT serial FROM items WHERE rss LIKE ? ORDER BY serial DESC LIMIT 1 OFFSET 9)",
+	      [entries[0].rss, entries[0].rss]);
 
   /* Trigger waiting requests */
   if (entries.length > 0) {
@@ -213,7 +218,7 @@ function getEntriesSince(since, cb) {
 
   var since_ = Number(since);
   var entries = [];
-  db.query("SELECT serial, content FROM items WHERE serial > ? ORDER BY serial DESC LIMIT 100",
+  db.query("SELECT serial, content FROM items WHERE serial > ? ORDER BY serial DESC LIMIT 30",
 	   [since_], function(error, row) {
 	     if (row) {
 	       /* Row */
