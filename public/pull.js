@@ -55,7 +55,7 @@ function createEntryParagraph(entry) {
     p.data('serial', entry.serial);
 
     /* Add contents */
-    p.attr('style', 'background-color: ' + generateColor(entry.rss));
+    p.css('background-color', generateColor(entry.rss));
     relLinks('image').forEach(
 	function(link) {
 	    var imgEl = $('<img/>');

@@ -7,20 +7,63 @@
 <script type="text/javascript" src="pull.js"></script>
 <style type="text/css">
 body {
-background-color: black;
+  background-color: black;
+  color: black;
 }
 h1 {
-  background-color: #ff0000;
-  border: 4px solid #ff7f7f;
+  text-align: center;
+  margin: 1px 0 3px;
+  background-color: #007f00;
+  color: #7fff7f;
+  border: 4px solid #7fff7f;
   -webkit-border-radius: 8px;
 }
-p {
-padding: 2ex;
-margin: 2px;
+p.entry {
+  padding: 1ex;
+  margin: 2px;
 
   background-color: #ffff00;
   border: 2px solid #00007f;
   -webkit-border-radius: 4px;
+}
+p.entry img {
+  float: left;
+  padding: 2px;
+  padding-right: 1ex;
+  max-height: 64px;
+}
+p.entry span.date {
+  opacity: 0.6;
+  padding-left: 2ex;
+}
+p.entry span.title {
+  font-size: 150%;
+}
+a {
+  text-decoration: none;
+  font-weight: bold;
+  color: black;
+}
+a:hover {
+  text-decoration: underline;
+}
+p#adder {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  margin: 0;
+  font-size: 200%;
+  font-weight: bold;
+  background-color: black;
+  color: #666;
+  border: 2px solid #ccc;
+  text-align: center;
+  width: 1em;
+  height: 1em;
+}
+p#adder:hover {
+  color: white;
+  border: 2px solid white;
 }
 </style>
 </head>
