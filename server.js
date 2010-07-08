@@ -253,7 +253,7 @@ function getEntriesSince(since, cb) {
 /* Web stuff */
 
 require('express');
-use(Logger);
+use(Logger, { format: 'combined' });
 configure(function(){
 	    set('root', __dirname);
 
