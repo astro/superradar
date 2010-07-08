@@ -34,7 +34,7 @@ function generateColor(s) {
     return r;
 }
 
-function createEntryParagraph(entry) {
+function createEntryParagraph(p, entry) {
     var linksByRel = {};
     entry.links.forEach(
 	function(link) {
@@ -46,7 +46,10 @@ function createEntryParagraph(entry) {
 	return linksByRel[rel] || [];
     };
 
-    var p = $('<p class="entry"></p>');
+    if (p)
+	p.contents().remove();
+    else
+	p = $('<p class="entry"></p>');
 
     /* Add data */
     p.data('rss', entry.rss);
@@ -88,7 +91,8 @@ function createEntryParagraph(entry) {
 	    linkEl.text(title);
 	    p.append(linkEl);
 	    p.append('<br/>');
-	});    
+	});
+
     return p;
 }
 
@@ -100,8 +104,6 @@ function receiveContent(content) {
     /* Add each entry */
     $.map(entries,
 	  function(entry) {
-	      /* TODO: remove dups */
-
 	      /* update max serial */
 	      if (entry.serial > serial)
 		  serial = entry.serial;
@@ -109,25 +111,37 @@ function receiveContent(content) {
 	      if (isNaN(Date.parse(entry.published)))
 		  entry.published = new Date().toString();
 
-	      var p = createEntryParagraph(entry);
-	      p.hide();
-	      var preceding = 'h1', done = false;
+	      var p = null, isNew = true;
 	      $('p.entry').each(function() {
-			      if (!done) {
-				  var published = $.data(this, 'published');
-				  if (published) {
-				      if (published < p.data('published'))
-					  preceding = $(this);
-				      else
-					  done = true;
-				  } else {
-				      // FIX:
-				      console.log('p w/o data: '+p1);
-				  }
-			      }
-			  });
-	      p.insertAfter(preceding);
-	      p.slideDown(500);
+				    var p1 = $(this);
+				    if (p1.data('rss') == entry.rss &&
+					p1.data('id') == entry.id) {
+					p = p1;
+					isNew = false;
+				    }
+				});
+	      p = createEntryParagraph(p, entry);
+	      if (isNew) {
+		  var preceding = 'h1', done = false;
+		  $('p.entry').each(function() {
+					if (!done) {
+					    var published = $.data(this, 'published');
+					    if (published) {
+						if (published < p.data('published'))
+						    preceding = $(this);
+						else
+						    done = true;
+					    } else {
+						// FIX:
+						console.log('p w/o data: '+p1);
+					    }
+					}
+				    });
+
+		  p.hide();
+		  p.insertAfter(preceding);
+		  p.slideDown(500);
+	      }
 	  });
 
     /* Drop old */
