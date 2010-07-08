@@ -169,14 +169,14 @@ function pull(serial) {
 	       } catch (e) {
 		   console.log("Error: " + e);
 		   window.setTimeout(function() {
-					 pull(serial);
+					 pull(-1);
 				     }, 1000);
 	       }
 	   },
 	   error: function(req, status) {
 	       console.log("Error: " + status);
 	       window.setTimeout(function() {
-				     pull(serial);
+				     pull(-1);
 				 }, 1000);
 	   }
 	 });
