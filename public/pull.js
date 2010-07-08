@@ -27,9 +27,21 @@ function generateColor(s) {
 	rgb[p] += s.charCodeAt(i);
 	p = (p + 1) % 3;
     }
+    // scramble so green is preferred
+    rgb = [rgb[2], rgb[0], rgb[1]];
+
+    var min = rgb[0], max = rgb[0];
+    rgb.forEach(function(c) {
+		    if (c < min)
+			min = c;
+		    if (c > max)
+			max = c;
+		});
     var r = '#';
     rgb.forEach(function(c) {
-		    r += padLeft(2, '0', ((c % COLOR_RANGE) + COLOR_OFFSET).toString(16));
+		    r += padLeft(2, '0',
+				 (Math.round((c - min) * COLOR_RANGE / (max - min)) +
+				  COLOR_OFFSET).toString(16));
 		});
     return r;
 }
