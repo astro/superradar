@@ -182,6 +182,59 @@ function pull(serial) {
 	 });
 }
 
+function insertStatusParagraph(status) {
+  var p = $('<p class="entry status"/>');
+  p.data('published', new Date().getTime());
+  p.text(status);
+
+  p.hide();
+  p.insertAfter('h1');
+  p.slideDown(1000);
+
+  return p;
+}
+
+function subscribe(url) {
+  var status = insertStatusParagraph('Subscribing to ' + url);
+
+  $.ajax({ type: 'POST',
+	   url: '/subscribe/' + encodeURIComponent(url),
+	   success: function() {
+	     status.text('Successfully subscribed to ' + url);
+	   },
+	   error: function() {
+	     status.text('Error subscribing to ' + url);
+	   }
+	 });
+}
+
+function setupAdmin() {
+  $.ajax({ url: '/admincheck',
+	   success: function(admin) {
+	     if (!admin)
+	       return;
+	     $('<p id="adder"><span id="plus">+</span></p>').insertBefore('h1');
+	     $('#plus').click(function() {
+				if ($('#subscribe').length > 0)
+				  $('#subscribe').remove();
+				else {
+				  var input = $('<input/>', { id: 'subscribe',
+							      size: 40 });
+				  input.keypress(function(ev) {
+						   if (ev.keyCode == '13') {
+						     ev.preventDefault();
+						     subscribe(input.val());
+						     $('#subscribe').remove();
+						   }
+						 });
+				  $('#adder').prepend(input);
+				}
+			      });
+	   }
+	 });
+}
+
 $(document).ready(function() {
+		    setupAdmin();
 		    pull(-1);
 		  });

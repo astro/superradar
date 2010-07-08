@@ -52,18 +52,32 @@ p#adder {
   right: 0;
   bottom: 0;
   margin: 0;
+  padding: 1px 4px;
   font-size: 200%;
   font-weight: bold;
   background-color: black;
   color: #666;
   border: 2px solid #ccc;
   text-align: center;
-  width: 1em;
-  height: 1em;
 }
 p#adder:hover {
   color: white;
   border: 2px solid white;
+}
+p#adder #plus {
+  width: 1.4ex;
+  height: 2ex;
+  display: inline-block;
+  cursor: pointer;
+}
+p#adder input {
+  margin: 2px 4px;
+  border: 1px solid black;
+}
+p.status {
+  color: white;
+  background-color: black;
+  font-family: monospace;
 }
 </style>
 </head>

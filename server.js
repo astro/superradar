@@ -38,16 +38,47 @@ db.open("radar.db",
 	});
 
 
+var NS_PUBSUB = 'http://jabber.org/protocol/pubsub';
+var xmppConn = null, xmppId = 0, xmppReqs = {};
 function setupSuperfeedr() {
   var conn = new xmpp.Client({ jid: config.Superfeedr.jid,
 			       password: config.Superfeedr.password
 			     });
-  // TODO: hook 'error', 'authFail', 'end'
+
   conn.addListener('online',
 		   function() {
-		     conn.send(new xmpp.Element('presence'));
+		     xmppConn = conn;
+		     conn.send(new xmpp.Element('presence').c('priority').t('10'));
 		   });
   conn.addListener('stanza', onSuperfeedrStanza);
+
+  var retry = function() {
+    xmppConn = null;
+    for(var id in xmppReqs) {
+      xmppReqs[id](false);
+    }
+    xmppReqs = {};
+
+    setTimeout(setupSuperfeedr, 1000);
+  };
+  conn.addListener('error', retry);
+  conn.addListener('end', retry);
+}
+function subscribe(url, cb) {
+  if (xmppConn) {
+    xmppId++;
+    xmppConn.send(new xmpp.Element('iq', { to: "firehoser.superfeedr.com",
+					   type: "set",
+					   id: xmppId }).
+			  c("pubsub", { xmlns: NS_PUBSUB }).
+			  c("subscribe", { node: url,
+					  jid: xmppConn.jid.bare().toString()
+					 }));
+    xmppReqs[xmppId] = cb;
+  } else {
+    sys.puts("Subscribe request but XMPP not ready");
+    cb(false);
+  }
 }
 
 
@@ -134,6 +165,15 @@ function onSuperfeedrStanza(stanza) {
       });
     });
     onEntries(entries);
+  } else if (stanza.is('iq')) {
+    var id = stanza.attrs['id'];
+    var type = stanza.attrs['type'];
+    if (xmppReqs[id]) {
+      if (type == 'error')
+	sys.puts("Reply: " + stanza.toString());
+      xmppReqs[id](type == 'result');
+      delete xmppReqs[id];
+    }
   }
 }
 
@@ -232,4 +272,28 @@ get('/updates/:since', function(since) {
 		      });
 
     });
+
+function adminCheck(req) {
+  var admin = config.adminCheck(req.socket.remoteAddress);
+  if (admin) {
+    var xff = req.headers['x-forwarded-for'];
+    if (xff)
+      admin = config.adminCheck(xff);
+  }
+  return admin ? true : false;
+}
+
+get('/admincheck', function() {
+      this.respond(200, JSON.stringify(adminCheck(this)));
+    });
+post('/subscribe/:url', function(url) {
+       url = decodeURIComponent(url);
+       if (adminCheck(this)) {
+	 var req = this;
+	 subscribe(url, function(success) {
+		     req.respond(success ? 200 : 500);
+		   });
+       } else
+	 this.respond(403, '');
+});
 run();
