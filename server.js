@@ -62,8 +62,8 @@ Date.prototype.toISO8601 = function() {
 sys.puts("toISO8601 of "+this);
   var tz = this.getTimezoneOffset();
   return this.getFullYear() + '-' +
-    padLeft(2, '0', this.getMonth()) + '-' +
-    padLeft(2, '0', this.getDay()) + 'T' +
+    padLeft(2, '0', this.getMonth() + 1) + '-' +
+    padLeft(2, '0', this.getDate()) + 'T' +
     padLeft(2, '0', this.getHours()) + ':' +
     padLeft(2, '0', this.getMinutes()) + ':' +
     padLeft(2, '0', this.getSeconds()) +

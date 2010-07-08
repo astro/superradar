@@ -12,8 +12,8 @@ function padLeft(len, padding, s) {
 }
 Date.prototype.toHuman = function() {
     return this.getFullYear() + '-' +
-	padLeft(2, '0', this.getMonth()) + '-' +
-	padLeft(2, '0', this.getDay()) + ' ' +
+	padLeft(2, '0', this.getMonth() + 1) + '-' +
+	padLeft(2, '0', this.getDate()) + ' ' +
 	padLeft(2, '0', this.getHours()) + ':' +
 	padLeft(2, '0', this.getMinutes()) + ':' +
 	padLeft(2, '0', this.getSeconds());
