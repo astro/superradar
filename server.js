@@ -163,7 +163,7 @@ function onEntries(entries) {
 
   /* Trigger waiting requests */
   if (entries.length > 0) {
-    onUpdateQueue.forEach(f);
+    onUpdateQueue.forEach(function(f) { f(); });
     onUpdateQueue = [];
   }
 }
