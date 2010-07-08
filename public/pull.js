@@ -222,7 +222,8 @@ function subscribe(url) {
 
 function setupAdmin() {
   $.ajax({ url: '/admincheck',
-	   success: function(admin) {
+	   success: function(content) {
+	     var admin = JSON.parse(content);
 	     if (!admin)
 	       return;
 	     $('<p id="adder"><span id="plus">+</span></p>').insertBefore('h1');
