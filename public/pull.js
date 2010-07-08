@@ -112,13 +112,12 @@ function receiveContent(content) {
 	      var p = createEntryParagraph(entry);
 	      p.hide();
 	      var preceding = 'h1', done = false;
-	      $('p').each(function() {
+	      $('p.entry').each(function() {
 			      if (!done) {
-				  var p1 = $(this);
-				  var published = p1.data('published');
+				  var published = $.data(this, 'published');
 				  if (published) {
 				      if (published < p.data('published'))
-					  preceding = p1;
+					  preceding = $(this);
 				      else
 					  done = true;
 				  } else {
@@ -132,7 +131,7 @@ function receiveContent(content) {
 	  });
 
     /* Drop old */
-    $('p').each(function() {
+    $('p.entry').each(function() {
 		    var p = $(this);
 		    var pSerial = p.data('serial');
 		    if (pSerial && pSerial <= serial - 100)
@@ -144,7 +143,7 @@ function receiveContent(content) {
 			  pull(serial);
 		      }, 100);
 
-    console.log("amount of p: "+$('p').length);
+    console.log($('p.entry').length + ' entries shown');
 }
 
 function pull(serial) {
