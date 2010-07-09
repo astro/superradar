@@ -291,10 +291,10 @@ function adminCheck(req) {
 get('/admincheck', function() {
       this.respond(200, JSON.stringify(adminCheck(this)));
     });
-post('/subscribe/:url', function(url) {
-       url = decodeURIComponent(url);
+get('/subscribe', function() {
        if (adminCheck(this)) {
 	 var req = this;
+	 var url = this.param('url');
 	 subscribe(url, function(success) {
 		     req.respond(success ? 200 : 500);
 		   });

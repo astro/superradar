@@ -209,8 +209,8 @@ function insertStatusParagraph(status) {
 function subscribe(url) {
   var status = insertStatusParagraph('Subscribing to ' + url);
 
-  $.ajax({ type: 'POST',
-	   url: '/subscribe/' + encodeURIComponent(url),
+  $.ajax({ url: '/subscribe',
+	   data: { url: url },
 	   success: function() {
 	     status.text('Successfully subscribed to ' + url);
 	   },
