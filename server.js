@@ -237,7 +237,7 @@ function getEntriesSince(since, cb) {
 	       }
 	       entry.serial = row.serial;
 	       entries.push(entry);
-	     } else {
+	     } else if (!error) {
 	       /* Select finished */
 	       if (entries.length > 0) {
 		 /* Done, trigger callback */
@@ -253,7 +253,8 @@ function getEntriesSince(since, cb) {
 		   getEntriesSince(since, cb);
 		 }
 	       }
-	     }
+	     } else
+	       throw error;
 	   });
 }
 
