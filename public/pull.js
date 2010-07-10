@@ -73,7 +73,7 @@ function createEntryParagraph(p, entry) {
     p.css('background-color', generateColor(entry.rss));
     relLinks('image').forEach(
 	function(link) {
-	    var imgEl = $('<img/>');
+	    var imgEl = $('<img class="logo"/>');
 	    imgEl.attr('src', link.href);
 	    p.append(imgEl);
 	});	    
@@ -103,6 +103,16 @@ function createEntryParagraph(p, entry) {
 	    linkEl.text(title);
 	    p.append(linkEl);
 	    p.append('<br/>');
+	});
+    relLinks('enclosure').forEach(
+	function(link) {
+	    if (link.type.indexOf &&
+		link.type.indexOf('image/') == 0) {
+		var imgEl = $('<img/>');
+		imgEl.attr('src', link.href);
+		p.append(imgEl);
+		p.append('<br/>');
+	    }
 	});
 
     return p;
