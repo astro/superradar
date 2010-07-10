@@ -135,23 +135,22 @@ function receiveContent(content) {
 	      p = createEntryParagraph(p, entry);
 	      if (isNew) {
 		  var preceding = 'h1', done = false;
-		  $('p.entry').each(function() {
-					if (!done) {
-					    var published = $.data(this, 'published');
-					    if (published) {
-						if (published < p.data('published'))
-						    preceding = $(this);
-						else
-						    done = true;
-					    } else {
-						// FIX:
-						console.log('p w/o data: '+p1);
-					    }
-					}
-				    });
+		  var published = Date.parse(entry.published);
+		  var p1s = document.getElementsByTagName('p');
+		  for(var p1i in p1s) {
+		      var p1 = p1s[p1i];
+		      var published1 = $.data(p1, 'published');
+		      if (published1) {
+			  if (published1 > published)
+			      preceding = p1;
+			  else
+			      break;
+		      } else
+			  console.log('no published '+p1.toString());
+		  }
 
 		  p.hide();
-		  p.insertAfter(preceding);
+		  p.insertAfter($(preceding));
 		  p.slideDown(500);
 	      }
 	  });
