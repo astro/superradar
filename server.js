@@ -12,17 +12,19 @@ db.query("PRAGMA synchronous=OFF", function() { });
 
 /* max 2 bulk queries are running at a time */
 var bulkQueue = [], bulkPending = 0;
-function bulkQuery(qry, data) {
-  if (bulkPending > 2) {
-    bulkQueue.push({ qry: qry, data: data });
+function bulkQuery(qry, data, cb) {
+  if (bulkPending > 1) {
+    bulkQueue.push({ qry: qry, data: data, cb: cb });
   } else {
     db.query(qry, data,
 	     function() {
 	       bulkPending--;
+	       cb && cb();
+
 	       /* Check for queued bulk qrys */
 	       var queued = bulkQueue.shift();
 	       if (queued) {
-		 bulkQuery(queued.qry, queued.data);
+		 bulkQuery(queued.qry, queued.data, queued.cb);
 	       }
 	     });
     bulkPending++;
@@ -204,13 +206,14 @@ function onEntries(entries) {
   if (entries[0])
     bulkQuery("DELETE FROM items WHERE rss LIKE ? AND serial < " +
 	      "(SELECT serial FROM items WHERE rss LIKE ? ORDER BY serial DESC LIMIT 1 OFFSET 9)",
-	      [entries[0].rss, entries[0].rss]);
-
-  /* Trigger waiting requests */
-  if (entries.length > 0) {
-    onUpdateQueue.forEach(function(f) { f(); });
-    onUpdateQueue = [];
-  }
+	      [entries[0].rss, entries[0].rss],
+	      function() {
+		/* Trigger waiting requests */
+		if (entries.length > 0) {
+		  onUpdateQueue.forEach(function(f) { f(); });
+		  onUpdateQueue = [];
+		}
+	      });
 }
 
 function getEntriesSince(since, cb) {
