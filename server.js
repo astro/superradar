@@ -295,6 +295,7 @@ function adminCheck(req) {
 get('/admincheck', function() {
       this.respond(200, JSON.stringify(adminCheck(this)));
     });
+// FIXME: XSS prone, wait for body-decoder to get usable, then switch to POST
 get('/subscribe', function() {
        if (adminCheck(this)) {
 	 var req = this;
