@@ -188,6 +188,13 @@ var onUpdateQueue = [];
 
 function onEntries(entries) {
   sys.puts("onEntries() "+entries.length+" entries, "+onUpdateQueue.length+" queued");
+  var updateQueueTrigger = function() {
+    /* Trigger waiting requests */
+    if (entries.length > 0) {
+      onUpdateQueue.forEach(function(f) { f(); });
+      onUpdateQueue = [];
+    }
+  };
 
   entriesReceived += entries.length;
   entries.forEach(function(entry) {
@@ -200,20 +207,15 @@ function onEntries(entries) {
 		    }
 
 		    bulkQuery("INSERT INTO items (rss, id, date, content) VALUES (?, ?, ?, ?)",
-			      [entry.rss, entry.id, entry.published, JSON.stringify(entry)]);
+			      [entry.rss, entry.id, entry.published, JSON.stringify(entry)],
+			      updateQueueTrigger);
 		  });
   /* For superfeedr there's always 1 notification per rss url */
   if (entries[0])
     bulkQuery("DELETE FROM items WHERE rss LIKE ? AND serial < " +
 	      "(SELECT serial FROM items WHERE rss LIKE ? ORDER BY serial DESC LIMIT 1 OFFSET 9)",
 	      [entries[0].rss, entries[0].rss],
-	      function() {
-		/* Trigger waiting requests */
-		if (entries.length > 0) {
-		  onUpdateQueue.forEach(function(f) { f(); });
-		  onUpdateQueue = [];
-		}
-	      });
+	      updateQueueTrigger);
 }
 
 function getEntriesSince(since, cb) {
