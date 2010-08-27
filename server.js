@@ -140,7 +140,7 @@ function onSuperfeedrStanza(stanza) {
     stanza.getChildren("event").forEach(function(eventEl) {
       eventEl.getChildren("status").forEach(function(statusEl) {
         feedTitle = statusEl.getChildText("title");
-	if (feedTitle.toString().length == 0)
+	if (feedTitle && feedTitle.toString().length == 0)
 	  feedTitle = null;
       });
 
