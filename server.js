@@ -4,7 +4,7 @@ var sys = require('sys'),
   sqlite = require('sqlite/sqlite');
 
 process.addListener('uncaughtException', function(e) {
-			sys.puts("Uncaught: "+e);
+			sys.puts(e.stack);
 		    });
 
 var db = new sqlite.Database();
