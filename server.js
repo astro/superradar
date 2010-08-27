@@ -274,6 +274,10 @@ function adminCheck(req) {
 }
 
 function app(app) {
+    app.head('/', function(req, res) {
+	res.writeHead(200, {});
+	res.end();
+    });
     app.get('/updates/:since', function(req, res) {
 	var since = req.params.since;
 	getEntriesSince(since, function(entries) {
