@@ -274,7 +274,8 @@ function adminCheck(req) {
 }
 
 function app(app) {
-    app.get('/updates/:since', function(req, res, since) {
+    app.get('/updates/:since', function(req, res) {
+	var since = req.params.since;
 	getEntriesSince(since, function(entries) {
 	    sys.puts("yielding "+entries.length+" entries since "+since);
 	    res.writeHead(200, {});
