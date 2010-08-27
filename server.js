@@ -1,7 +1,7 @@
 var sys = require('sys'),
   config = require('./config'),
-  xmpp = require('xmpp'),
-  sqlite = require('sqlite');
+  xmpp = require('node-xmpp'),
+  sqlite = require('sqlite/sqlite');
 
 process.addListener('uncaughtException', function(e) {
 			sys.puts("Uncaught: "+e);
@@ -263,27 +263,6 @@ function getEntriesSince(since, cb) {
 
 /* Web stuff */
 
-require('express');
-use(Logger, { format: 'combined' });
-configure(function(){
-	    set('root', __dirname);
-
-	    require('express/express/plugins');
-	    use(Static, { path: set('root') + '/public' });
-	    use(require('express/express/plugins/redirect').Redirect);
-	  });
-get('/', function() {
-      this.redirect("/public/index.html");
-    });
-get('/updates/:since', function(since) {
-      var req = this;
-      getEntriesSince(since, function(entries) {
-			sys.puts("yielding "+entries.length+" entries since "+since);
-			req.respond(200, JSON.stringify(entries));
-		      });
-
-    });
-
 function adminCheck(req) {
   var admin = config.adminCheck(req.socket.remoteAddress);
   if (admin) {
@@ -294,18 +273,40 @@ function adminCheck(req) {
   return admin ? true : false;
 }
 
-get('/admincheck', function() {
-      this.respond(200, JSON.stringify(adminCheck(this)));
+function app(app) {
+    app.get('/updates/:since', function(req, res, since) {
+	getEntriesSince(since, function(entries) {
+	    sys.puts("yielding "+entries.length+" entries since "+since);
+	    res.writeHead(200, {});
+	    res.end(JSON.stringify(entries));
+	});
+
     });
-// FIXME: XSS prone, wait for body-decoder to get usable, then switch to POST
-get('/subscribe', function() {
-       if (adminCheck(this)) {
-	 var req = this;
-	 var url = this.param('url');
-	 subscribe(url, function(success) {
-		     req.respond(success ? 200 : 500);
-		   });
-       } else
-	 this.respond(403, '');
-});
-run();
+    app.get('/admincheck', function(req, res) {
+	res.writeHead(200, {});
+	res.end(JSON.stringify(adminCheck(req)));
+    });
+    // FIXME: XSS prone, wait for body-decoder to get usable, then switch to POST
+    app.get('/subscribe', function(req, res) {
+	if (adminCheck(req)) {
+	    var url = req.params['url'];
+	    subscribe(url, function(success) {
+		res.writeHead(success ? 200 : 500, {});
+		res.end();
+	    });
+	} else {
+	    res.writeHead(403, {});
+	    res.end();
+	}
+    });
+}
+
+var Connect = require('connect');
+Connect.createServer(
+    Connect.logger(),
+    Connect.router(app),
+    Connect.staticProvider(__dirname + '/public'),
+    Connect.errorHandler({ dumpExceptions: true, showStack: true })
+).listen(4000);
+
+
