@@ -32,7 +32,7 @@ function bulkQuery(qry, data, cb) {
 }
 db.open("radar.db",
 	function() {
-	  db.query("CREATE TABLE items (serial INTEGER PRIMARY KEY AUTOINCREMENT, rss TEXT, id TEXT, date INT, content TEXT)", [],
+	  db.query("CREATE TABLE items (serial INTEGER PRIMARY KEY AUTOINCREMENT, rss TEXT, id TEXT, date INT, content TEXT, UNIQUE (rss, id))", [],
 		   function() {
 		     sys.puts("CREATE -> " + JSON.stringify(arguments));
 		     setupSuperfeedr();
