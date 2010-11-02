@@ -4,15 +4,13 @@ var querystring = require('querystring');
 
 module.exports = {
     subscribe: function(hub, topic, callback, token, secret, cb) {
-	var form = {
-	    hub: { callback: callback,
-		   mode: 'subscribe',
-		   topic: topic,
-		   verify: 'sync',
-		   secret: secret,
-		   verify_token: token
-	    }
-	};
+	var form = { 'hub.callback': callback,
+		     'hub.mode': 'subscribe',
+		     'hub.topic': topic,
+		     'hub.verify': 'sync',
+		     'hub.secret': secret,
+		     'hub.verify_token': token
+		   };
 console.log({form:form});
 
 	var hu = url.parse(hub.url);
@@ -32,7 +30,7 @@ console.log({body:body});
 
 	req.on('response', function(res) {
 console.log({'PSHB subscribe res': res});
-	    if (res.statusCode === 200) {
+	    if (res.statusCode >= 200 && res.statusCode < 300) {
 		cb(null);
 	    } else {
 		cb(new Error('HTTP ' + res.statusCode));
