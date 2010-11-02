@@ -76,13 +76,13 @@ function createEntryParagraph(p, entry) {
 	    var imgEl = $('<img class="logo"/>');
 	    imgEl.attr('src', link.href);
 	    p.append(imgEl);
-	});	    
+	});
 
     var feedEl = $('<a class="feed"></a>');
     feedEl.attr('href', entry.rss);
     feedEl.text(entry.feedTitle ? entry.feedTitle : entry.rss);
     p.append(feedEl);
-    
+
     var dateEl = $('<span class="date"></span>');
     dateEl.text(new Date(entry.published).toHuman());
     p.append(dateEl);
@@ -219,7 +219,9 @@ function subscribe(url) {
   var status = insertStatusParagraph('Subscribing to ' + url);
 
   $.ajax({ url: '/subscribe',
-	   data: { url: url },
+	   type: 'POST',
+	   dataType: 'text/plain',
+	   data: url,
 	   success: function() {
 	     status.text('Successfully subscribed to ' + url);
 	   },

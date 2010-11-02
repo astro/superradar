@@ -1,70 +1,139 @@
-var sqlite = require('sqlite/sqlite');
+var sqlite = require('sqlite');
 
 var db = new sqlite.Database();
 db.query("PRAGMA synchronous=OFF", function() { });
 
-exports.init = function(model) {
-    /* Query management */
-    var pending = 0;
-    var queue = [];
+/* Query management */
+var pending = 0;
+var queue = [];
 
-    var enqueue = function(f) {
-	if (pending < 1) {
+function enqueue(f) {
+    if (pending < 1) {
+	pending++;
+	// Call immediately
+	f();
+    } else {
+	queue.push(f);
+    }
+}
+
+function done() {
+    pending--;
+    process.nextTick(function() {
+	if (pending < 1 && queue.length > 0) {
+	    var f = queue.shift();
 	    pending++;
-	    // Call immediately
 	    f();
-	} else {
-	    queue.push(f);
 	}
-    };
-    var done = function() {
-	pending--;
-	process.nextTick(function() {
-	    if (pending < 1 && queue.length > 0) {
-		pending++;
-		f();
-	    }
-	});
-    };
-    var query = function(sql, values, cb) {
-	enqueue(function() {
-	    db.query(sql, values, function() {
-		done();
-		cb.apply(db, arguments);
-	    });
-	});
-    };
+    });
+}
 
-    /* Initialization */
+function query(sql, values, cb) {
     enqueue(function() {
-	db.open("radar.db", function(err) {
-	    if (err) {
-		console.error(err);
-		process.exit(1);
-	    }
+	db.query(sql, values, function() {
 	    done();
+	    cb.apply(db, arguments);
 	});
     });
-    query("CREATE TABLE items (" +
-	  "serial INTEGER PRIMARY KEY AUTOINCREMENT, " +
-	  "rss TEXT, id TEXT, date INT, content TEXT, " +
-	  "UNIQUE (rss, id))", [], function() {
-	      console.log("CREATE items -> " + JSON.stringify(arguments));
-	  });
-    query("CREATE TABLE feeds (" +
-	  "rss TEXT PRIMARY KEY, " +
-	  "token TEXT)", [], function() {
-	      console.log("CREATE feeds -> " + JSON.stringify(arguments));
-	  });
+}
 
-    /* API */
-    return {
-	addEntries: function(entries, cb) {
-	    entries.forEach(function(entry) {
-		query("INSERT INTO items (rss, id, date, content) VALUES (?, ?, ?, ?)",
-		      [entry.rss, entry.id, entry.published, JSON.stringify(entry)],
-		      cb);
-	    });
+/* Initialization */
+enqueue(function() {
+    db.open("radar.db", function(err) {
+	if (err) {
+	    console.error(err);
+	    process.exit(1);
 	}
-    };
+	done();
+    });
+});
+query("CREATE TABLE items (" +
+      "serial INTEGER PRIMARY KEY AUTOINCREMENT, " +
+      "rss TEXT, id TEXT, date INT, content TEXT, " +
+      "UNIQUE (rss, id))", [], function() {
+	  console.log("CREATE items -> " + JSON.stringify(arguments));
+});
+query("CREATE TABLE feeds (" +
+      "rss TEXT PRIMARY KEY, " +
+      "token TEXT, " +
+      "secret TEXT)", [], function() {
+	  console.log("CREATE feeds -> " + JSON.stringify(arguments));
+});
+
+/* API */
+
+var onUpdateQueue = [];
+
+module.exports.addEntries = function(entries, cb) {
+    entries.forEach(function(entry) {
+	query("INSERT INTO items (rss, id, date, content) VALUES (?, ?, ?, ?)",
+	      [entry.rss, entry.id, entry.published, JSON.stringify(entry)],
+	      function() {
+		  cb.apply(db, arguments);
+
+		  var updateQueue = onUpdateQueue();
+		  onUpdateQueue = [];
+		  process.nextTick(function() {
+		      updateQueue.forEach(function(f) { f(); });
+		  });
+	      });
+    });
 };
+
+module.exports.getEntriesSince = function(since, cb) {
+    var since_ = parseInt(since, 10);
+    var entries = [];
+    query("SELECT serial, content FROM items WHERE serial > ? ORDER BY serial DESC LIMIT 30",
+	  [since_], function(error, row) {
+	      if (row) {
+		  /* Row */
+		  var entry;
+		  try {
+		      entry = JSON.parse(row.content);
+		      /* Save bandwidth for this request: */
+		      delete entry.content;
+		      delete entry.summary;
+		  } catch (e) {
+		      sys.puts("Error parsing content: "+e);
+		      sys.puts(row.content);
+		      return;
+		  }
+		  entry.serial = row.serial;
+		  entries.push(entry);
+	      } else if (!error) {
+		  /* Select finished */
+		  if (entries.length > 0) {
+		      /* Done, trigger callback */
+		      cb(entries);
+		  } else {
+		      /* No entries */
+		      onUpdateQueue.push(function() {
+			  getEntriesSince(since, cb);
+		      });
+		  }
+	      } else
+		  throw error;
+	  });
+};
+
+module.exports.getSubscription = function(rss, cb) {
+    var emitted = false;
+    query("SELECT rss, token, secret FROM feeds WHERE rss = ?", [rss],
+	  function(err, row) {
+	      if (err)
+		  cb(err);
+	      else if (!emitted) {
+		  cb(row);
+	      }
+    });
+};
+
+module.exports.addSubscription = function(rss, token, secret, cb) {
+    query("INSERT INTO feeds (rss, token, secret) VALUES (?, ?, ?)",
+	  [rss, token, secret],
+	  function(err) {
+	      // TODO: already exists? ...in caller
+	      cb(err);
+	  });
+};
+

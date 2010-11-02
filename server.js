@@ -1,9 +1,13 @@
-var sys = require('sys'),
-  config = require('./config');
-
 process.addListener('uncaughtException', function(e) {
-			sys.puts(e.stack);
+			console.error(e.stack);
 		    });
+
+var sys = require('sys'),
+    config = require('./config'),
+    model = require('./model'),
+    pshb = require('./pshb');
+
+var hubUrl = 'http://' + config.pshb.host + config.pshb.path;
 
 
 /* A counter, for getEntriesSince() to determine whether to wait or
@@ -45,47 +49,14 @@ function onEntries(entries) {
 	      updateQueueTrigger);
 }
 
-function getEntriesSince(since, cb) {
-  var old_entriesReceived = entriesReceived;
 
-  var since_ = Number(since);
-  var entries = [];
-  db.query("SELECT serial, content FROM items WHERE serial > ? ORDER BY serial DESC LIMIT 30",
-	   [since_], function(error, row) {
-	     if (row) {
-	       /* Row */
-	       try {
-		 var entry = JSON.parse(row.content);
-		 /* Save bandwidth for this request: */
-		 delete entry.content;
-		 delete entry.summary;
-	       } catch (e) {
-		 sys.puts("Error parsing content: "+e);
-		 sys.puts(row.content);
-		 return;
-	       }
-	       entry.serial = row.serial;
-	       entries.push(entry);
-	     } else if (!error) {
-	       /* Select finished */
-	       if (entries.length > 0) {
-		 /* Done, trigger callback */
-		 cb(entries);
-	       } else {
-		 /* No entries */
-		 if (old_entriesReceived == entriesReceived) {
-		   onUpdateQueue.push(function() {
-		     getEntriesSince(since, cb);
-		   });
-		 } else {
-		   /* There were updates during the SELECT, retry immediately */
-		   getEntriesSince(since, cb);
-		 }
-	       }
-	     } else
-	       throw error;
-	   });
-}
+
+function pshbCheckSubscription(subscribed, url, token, cb) {
+    model.getSubscription(url, function(feed) {
+console.log({getSubscription:feed,token:token});
+	cb(feed && feed.token === token);
+    });
+};
 
 
 /* Web stuff */
@@ -101,13 +72,9 @@ function adminCheck(req) {
 }
 
 function app(app) {
-    app.head('/', function(req, res) {
-	res.writeHead(200, {});
-	res.end();
-    });
     app.get('/updates/:since', function(req, res) {
 	var since = req.params.since;
-	getEntriesSince(since, function(entries) {
+	model.getEntriesSince(since, function(entries) {
 	    sys.puts("yielding "+entries.length+" entries since "+since);
 	    res.writeHead(200, {});
 	    res.end(JSON.stringify(entries));
@@ -118,13 +85,31 @@ function app(app) {
 	res.writeHead(200, {});
 	res.end(JSON.stringify(adminCheck(req)));
     });
-    // FIXME: XSS prone, wait for body-decoder to get usable, then switch to POST
-    app.get('/subscribe', function(req, res) {
+    app.post('/subscribe', function(req, res) {
 	if (adminCheck(req)) {
-	    var url = req.params['url'];
-	    subscribe(url, function(success) {
-		res.writeHead(success ? 200 : 500, {});
-		res.end();
+	    req.setEncoding('utf-8');
+	    var url = '';
+	    req.on('data', function(data) {
+		url += data;
+	    });
+	    req.on('end', function() {
+		console.log({url:url});
+		model.addSubscription(url, 'foobar', 'quux', function(err) {
+		    if (!err)
+			pshb.subscribe(config.superHub, url, hubUrl,
+				       'foobar', 'quux', function(err) {
+			    res.writeHead(err ? 500 : 200, {});
+			    res.end(err && err.message);
+			});
+		    else if (err.message === 'constraint failed') {
+			res.writeHead(200, {});
+			res.end();
+		    } else {
+			console.error(err.stack);
+			res.writeHead(400, {});
+			res.end(err.message);
+		    }
+		});
 	    });
 	} else {
 	    res.writeHead(403, {});
@@ -136,6 +121,8 @@ function app(app) {
 var Connect = require('connect');
 Connect.createServer(
     Connect.logger(),
+    pshb.makeCallbackHandler(config.pshb.path,
+			     pshbCheckSubscription),
     Connect.router(app),
     Connect.staticProvider(__dirname + '/public'),
     Connect.errorHandler({ dumpExceptions: true, showStack: true })
