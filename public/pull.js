@@ -145,7 +145,7 @@ function receiveContent(content) {
 	      p = createEntryParagraph(p, entry);
 	      if (isNew) {
 		  var preceding = 'h1', done = false;
-		  var published = Date.parse(entry.published);
+		  /*var published = Date.parse(entry.published);
 		  var p1s = document.getElementsByTagName('p');
 		  for(var p1i in p1s) {
 		      var p1 = p1s[p1i];
@@ -157,7 +157,7 @@ function receiveContent(content) {
 			      break;
 		      } else
 			  console.log('no published '+p1.toString());
-		  }
+		  }*/
 
 		  p.hide();
 		  p.insertAfter($(preceding));
