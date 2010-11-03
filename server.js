@@ -5,7 +5,8 @@ process.addListener('uncaughtException', function(e) {
 var sys = require('sys'),
     config = require('./config'),
     model = require('./model'),
-    pshb = require('./pshb');
+    pshb = require('./pshb'),
+    atom = require('./atom');
 
 var hubUrl = 'http://' + config.pshb.host + config.pshb.path;
 
@@ -58,6 +59,10 @@ console.log({getSubscription:feed,token:token});
     });
 };
 
+function pshbOnFeed(feed) {
+    model.addEntries(feed.entries, function() {
+    });
+}
 
 /* Web stuff */
 
@@ -73,7 +78,7 @@ function adminCheck(req) {
 
 function app(app) {
     app.get('/updates/:since', function(req, res) {
-	var since = req.params.since;
+	var since = parseInt(req.params.since, 10);
 	model.getEntriesSince(since, function(entries) {
 	    sys.puts("yielding "+entries.length+" entries since "+since);
 	    res.writeHead(200, {});
@@ -122,7 +127,7 @@ var Connect = require('connect');
 Connect.createServer(
     Connect.logger(),
     pshb.makeCallbackHandler(config.pshb.path,
-			     pshbCheckSubscription),
+			     pshbCheckSubscription, pshbOnFeed),
     Connect.router(app),
     Connect.staticProvider(__dirname + '/public'),
     Connect.errorHandler({ dumpExceptions: true, showStack: true })

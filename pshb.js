@@ -1,6 +1,7 @@
 var http = require('http');
 var url = require('url');
 var querystring = require('querystring');
+var atom = require('./atom');
 
 module.exports = {
     subscribe: function(hub, topic, callback, token, secret, cb) {
@@ -46,7 +47,7 @@ console.log({'PSHB subscribe res': res});
      * checkSubscription: function(subscribed, url, token, cb)
      *
      **/
-    makeCallbackHandler: function(hubPath, checkSubscription) {
+    makeCallbackHandler: function(hubPath, checkSubscription, onFeed) {
 	// caller must check path
 	return function(req, res, next) {
 console.log({m:req.method,u:req.url});
@@ -78,8 +79,28 @@ console.log({pshbUrl: req.url});
 				      }
 				  });
 
-	    /*} else if (req.method === 'POST') {
+	    } else if (req.method === 'POST') {
 		/* Subscription */
+console.log({'postHdrs':req.headers});
+		req.setEncoding('utf-8');
+		var p = atom.parse(function(err, tree) {
+		    if (!err) {
+			res.writeHead(200, { });
+			res.end();
+
+			if (tree) {
+			    onFeed(atom.extractFeed(tree));
+			}
+		    } else {
+			console.error(err.stack);
+			res.writeHead(500, { });
+			res.end(err.message);
+		    }
+		});
+		// TODO: verify req.headers['x-hub-signature']
+		req.on('data', p.write);
+		req.on('end', p.end);
+
 	    } else {
 		res.writeHead(400, { });
 		res.end();

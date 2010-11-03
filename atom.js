@@ -1,3 +1,6 @@
+var expat = require('node-expat');
+var xmpp = require('xmpp');
+
 function padLeft(len, padding, s) {
   s = s.toString();
   while(s.length < len) {
@@ -47,48 +50,66 @@ function xmlToAuthor(authorEl) {
     return json;
 }
 
-function onSuperfeedrStanza(stanza) {
-  if (stanza.is('message')) {
-    var feedTitle = null;
+exports.extractFeed = function(tree) {
+    var rss = null;
     var entries = [];
-    stanza.getChildren("event").forEach(function(eventEl) {
-      eventEl.getChildren("status").forEach(function(statusEl) {
-        feedTitle = statusEl.getChildText("title");
-	if (feedTitle && feedTitle.toString().length == 0)
-	  feedTitle = null;
-      });
 
-      eventEl.getChildren("items").forEach(function(itemsEl) {
-	var node = itemsEl.attrs.node;
-	if (node) {
-	  itemsEl.getChildren("item").forEach(function(itemEl) {
-	    itemEl.getChildren("entry").forEach(function(entryEl) {
-	      var json = { rss: node };
-	      if (feedTitle)
-		json.feedTitle = feedTitle;
-	      xmlToAttr(entryEl, "id", json);
-	      xmlToAttr(entryEl, "title", json);
-	      xmlToAttr(entryEl, "published", json);
-	      xmlToAttr(entryEl, "content", json);
-	      xmlToAttr(entryEl, "summary", json);
-	      json['links'] = entryEl.getChildren("link").map(xmlToLink);
-	      json['authors'] = entryEl.getChildren("author").map(xmlToAuthor);
-
-	      entries.push(json);
-	    });
-	  });
-	}
-      });
+    tree.getChildren("link").forEach(function(linkEl) {
+	if (!rss && linkEl.attrs.rel === 'self')
+	    rss = linkEl.attrs.href;
     });
-    onEntries(entries);
-  } else if (stanza.is('iq')) {
-    var id = stanza.attrs['id'];
-    var type = stanza.attrs['type'];
-    if (xmppReqs[id]) {
-      if (type == 'error')
-	sys.puts("Reply: " + stanza.toString());
-      xmppReqs[id](type == 'result');
-      delete xmppReqs[id];
-    }
-  }
+    tree.getChildren("entry").forEach(function(entryEl) {
+	var json = { rss: rss };
+	xmlToAttr(entryEl, "id", json);
+	xmlToAttr(entryEl, "title", json);
+	xmlToAttr(entryEl, "published", json);
+	xmlToAttr(entryEl, "content", json);
+	xmlToAttr(entryEl, "summary", json);
+	json['links'] = entryEl.getChildren("link").map(xmlToLink);
+	json['authors'] = entryEl.getChildren("author").map(xmlToAuthor);
+
+	entries.push(json);
+    });
+    return { rss: rss, entries: entries };
+}
+
+exports.parse = function(cb) {
+    var parser = new expat.Parser('UTF-8');
+    var element, tree;
+    parser.addListener('startElement', function(name, attrs) {
+        var child = new xmpp.Element(name, attrs);
+        if (!element) {
+	    element = child;
+        } else {
+	    element = element.cnode(child);
+        }
+    });
+    parser.addListener('endElement', function(name, attrs) {
+        if (!element) {
+	    /* Err */
+        } else if (element && name == element.name) {
+            if (element.parent)
+                element = element.parent;
+            else if (element && !tree) {
+		tree = element;
+		element = undefined;
+            }
+        }
+    });
+    parser.addListener('text', function(str) {
+        if (element)
+            element.t(str);
+    });
+
+    return { write: function(data) {
+		 if (!parser.parse(data, false))
+		     cb(new Error(parser.getError()));
+	     },
+	     end: function() {
+		 if (!parser.parse('', true))
+		     cb(new Error(parser.getError()));
+		 else
+		     cb(null, tree);
+	     }
+	   };
 }

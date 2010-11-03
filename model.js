@@ -65,31 +65,41 @@ query("CREATE TABLE feeds (" +
 var onUpdateQueue = [];
 
 module.exports.addEntries = function(entries, cb) {
+    var pending = 0;
     entries.forEach(function(entry) {
+console.log({entry:entry.id});
 	query("INSERT INTO items (rss, id, date, content) VALUES (?, ?, ?, ?)",
 	      [entry.rss, entry.id, entry.published, JSON.stringify(entry)],
 	      function() {
+		  pending--;
+console.log({pending:pending});
+		  if (pending > 0)
+		      return;
+
 		  cb.apply(db, arguments);
 
-		  var updateQueue = onUpdateQueue();
+		  var updateQueue = onUpdateQueue;
 		  onUpdateQueue = [];
 		  process.nextTick(function() {
+		      console.log({updateQueue:updateQueue.length});
 		      updateQueue.forEach(function(f) { f(); });
 		  });
 	      });
+        pending++;
     });
 };
 
-module.exports.getEntriesSince = function(since, cb) {
-    var since_ = parseInt(since, 10);
+module.exports.getEntriesSince = function getEntriesSince(since, cb) {
+console.log({getEntriesSince:since});
     var entries = [];
-    query("SELECT serial, content FROM items WHERE serial > ? ORDER BY serial DESC LIMIT 30",
-	  [since_], function(error, row) {
+    query("SELECT serial, content FROM items WHERE serial >= ? ORDER BY serial DESC LIMIT 30",
+	  [since + 1], function(error, row) {
 	      if (row) {
 		  /* Row */
 		  var entry;
 		  try {
 		      entry = JSON.parse(row.content);
+console.log({eP:entry.published});
 		      /* Save bandwidth for this request: */
 		      delete entry.content;
 		      delete entry.summary;
@@ -102,6 +112,7 @@ module.exports.getEntriesSince = function(since, cb) {
 		  entries.push(entry);
 	      } else if (!error) {
 		  /* Select finished */
+console.log({'getEntriesSince query':entries.length});
 		  if (entries.length > 0) {
 		      /* Done, trigger callback */
 		      cb(entries);
