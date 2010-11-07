@@ -46,7 +46,7 @@ function generateColor(s) {
     return r;
 }
 
-function createEntryParagraph(p, entry) {
+function createEntryDiv(div, entry) {
     var linksByRel = {};
     entry.links.forEach(
 	function(link) {
@@ -54,55 +54,55 @@ function createEntryParagraph(p, entry) {
 		linksByRel[link.rel] = [];
 	    linksByRel[link.rel].push(link);
 	});
-    relLinks = function(rel) {
+    var relLinks = function(rel) {
 	return linksByRel[rel] || [];
     };
 
-    if (p)
-	p.contents().remove();
+    if (div)
+	div.contents().remove();
     else
-	p = $('<p class="entry"></p>');
+	div = $('<div class="entry"></div>');
 
     /* Add data */
-    p.data('rss', entry.rss);
-    p.data('id', entry.id);
-    p.data('published', Date.parse(entry.published));  // converts to local time
-    p.data('serial', entry.serial);
+    div.data('rss', entry.rss);
+    div.data('id', entry.id);
+    div.data('published', Date.parse(entry.published));  // converts to local time
+    div.data('serial', entry.serial);
 
     /* Add contents */
-    p.css('background-color', generateColor(entry.rss));
+    var dateEl = $('<p class="date"></p>');
+    dateEl.text(new Date(entry.published).toHuman());
+    div.append(dateEl);
+
+    var feedEl = $('<p class="source"><a></a></p>');
+    feedEl.find('a').attr('href', entry.rss).
+	text(entry.feedTitle ? entry.feedTitle : entry.rss);
+    div.append(feedEl);
+
     relLinks('image').forEach(
 	function(link) {
 	    var imgEl = $('<img class="logo"/>');
 	    imgEl.attr('src', link.href);
-	    p.append(imgEl);
+	    div.append(imgEl);
 	});
 
-    var feedEl = $('<a class="feed"></a>');
-    feedEl.attr('href', entry.rss);
-    feedEl.text(entry.feedTitle ? entry.feedTitle : entry.rss);
-    p.append(feedEl);
-
-    var dateEl = $('<span class="date"></span>');
-    dateEl.text(new Date(entry.published).toHuman());
-    p.append(dateEl);
-    p.append('<br/>');
-
-    var titleEl = $('<span class="title"></span>');
+    var titleEl = $('<p class="title"></p>');
     titleEl.text(entry.title);
-    p.append(titleEl);
-    p.append('<br/>');
+    div.append(titleEl);
+
+    var listEl = $('<ul class="links"></ul>');
+    div.append(listEl);
 
     relLinks('alternate').forEach(
 	function(link) {
 	    var title = link.title || link.href;
 	    if (title == entry.title)
 		title = link.href;
-	    var linkEl = $('<a class="link"></a>');
-	    linkEl.attr('href', link.href);
-	    linkEl.text(title);
-	    p.append(linkEl);
-	    p.append('<br/>');
+	    var linkEl = $('<li><a></a></li>');
+	    var aEl = linkEl.find('a');
+	    aEl.attr('href', link.href);
+	    aEl.text(title);
+	    listEl.append(linkEl);
 	});
     relLinks('enclosure').forEach(
 	function(link) {
@@ -110,12 +110,11 @@ function createEntryParagraph(p, entry) {
 		link.type.indexOf('image/') == 0) {
 		var imgEl = $('<img/>');
 		imgEl.attr('src', link.href);
-		p.append(imgEl);
-		p.append('<br/>');
+		div.append(imgEl);
 	    }
 	});
 
-    return p;
+    return div;
 }
 
 function receiveContent(content) {
@@ -133,18 +132,18 @@ function receiveContent(content) {
 	      if (isNaN(Date.parse(entry.published)))
 		  entry.published = new Date().toString();
 
-	      var p = null, isNew = true;
-	      $('p.entry').each(function() {
-				    var p1 = $(this);
-				    if (p1.data('rss') == entry.rss &&
-					p1.data('id') == entry.id) {
-					p = p1;
+	      var div = null, isNew = true;
+	      $('.entry').each(function() {
+				    var div1 = $(this);
+				    if (div1.data('rss') == entry.rss &&
+					div1.data('id') == entry.id) {
+					div = div1;
 					isNew = false;
 				    }
 				});
-	      p = createEntryParagraph(p, entry);
+	      div = createEntryDiv(div, entry);
 	      if (isNew) {
-		  var preceding = 'h1', done = false;
+		  var preceding, done = false;
 		  /*var published = Date.parse(entry.published);
 		  var p1s = document.getElementsByTagName('p');
 		  for(var p1i in p1s) {
@@ -159,18 +158,18 @@ function receiveContent(content) {
 			  console.log('no published '+p1.toString());
 		  }*/
 
-		  p.hide();
-		  p.insertAfter($(preceding));
-		  p.slideDown(500);
+		  div.hide();
+		  $('#content').prepend(div);
+		  div.slideDown(500);
 	      }
 	  });
 
     /* Drop old */
-    $('p.entry').each(function() {
-		    var p = $(this);
-		    var pSerial = p.data('serial');
+    $('.entry').each(function() {
+		    var div = $(this);
+		    var pSerial = div.data('serial');
 		    if (pSerial && pSerial <= serial - 100)
-			p.remove();
+			div.remove();
 		});
 
     /* Get next */
@@ -178,7 +177,7 @@ function receiveContent(content) {
 			  pull(serial);
 		      }, 100);
 
-    console.log($('p.entry').length + ' entries shown');
+    console.log($('.entry').length + ' entries shown');
 }
 
 function pull(serial) {
@@ -188,7 +187,7 @@ function pull(serial) {
 	       try {
 		   receiveContent(content);
 	       } catch (e) {
-		   console.log("Error: " + e);
+		   console.log("Error: " + e.stack);
 		   window.setTimeout(function() {
 					 pull(-1);
 				     }, 1000);
@@ -209,7 +208,7 @@ function insertStatusParagraph(status) {
   p.text(status);
 
   p.hide();
-  p.insertAfter('h1');
+  $('#content').prepend(p);
   p.slideDown(1000);
 
   return p;
