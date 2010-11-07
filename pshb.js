@@ -14,16 +14,17 @@ module.exports = {
 		   };
 console.log({form:form});
 
-	var hu = url.parse(hub.url);
+	var hu = url.parse(hub);
 	var cl = http.createClient(hu.port || 80, hu.hostname);
 	var body = querystring.stringify(form);
 	var headers = { 'Host': hu.hostname,
 			'Content-Type': 'application/x-www-form-urlencoded',
 			'Content-Length': body.length
 		      };
-	if (hub.user && hub.password)
+	if (hu.auth)
 	    headers['Authorization'] = 'Basic ' +
-	    (new Buffer(hub.user + ':' + hub.password)).toString('base64');
+	    (new Buffer(hu.auth)).toString('base64');
+
 	var req = cl.request('POST', hu.pathname, headers);
 console.log({body:body});
 	req.write(body);
