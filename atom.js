@@ -1,5 +1,7 @@
 var expat = require('node-expat');
 var xmpp = require('xmpp');
+var http = require('http');
+var url = require('url');
 
 function padLeft(len, padding, s) {
   s = s.toString();
@@ -9,7 +11,6 @@ function padLeft(len, padding, s) {
   return s;
 }
 Date.prototype.toISO8601 = function() {
-sys.puts("toISO8601 of "+this);
   var tz = this.getTimezoneOffset();
   return this.getFullYear() + '-' +
     padLeft(2, '0', this.getMonth() + 1) + '-' +
@@ -112,4 +113,25 @@ exports.parse = function(cb) {
 		     cb(null, tree);
 	     }
 	   };
-}
+};
+
+exports.fetch = function(uri, cb) {
+  var hu = url.parse(uri);
+  var cl = http.createClient(hu.port || 80, hu.hostname);
+  var req = cl.request('GET', hu.pathname, { 'Accept': 'application/atom+xml',
+					     'Host': hu.host
+					   });
+  req.end();
+
+  req.on('response', function(res) {
+    var p = exports.parse(cb);
+    res.setEncoding('utf-8');
+    res.on('data', function(data) {
+      p.write(data);
+    });
+    res.on('end', function() {
+      p.end();
+    });
+  });
+  req.on('error', cb);
+};

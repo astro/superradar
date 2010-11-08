@@ -12,7 +12,7 @@ module.exports = {
 		     'hub.secret': secret,
 		     'hub.verify_token': token
 		   };
-console.log({form:form});
+console.log({hub:hub,form:form});
 
 	var hu = url.parse(hub);
 	var cl = http.createClient(hu.port || 80, hu.hostname);
@@ -35,9 +35,16 @@ console.log({'PSHB subscribe res': res});
 	    if (res.statusCode >= 200 && res.statusCode < 300) {
 		cb(null);
 	    } else {
-		cb(new Error('HTTP ' + res.statusCode));
+		var text = '';
+		res.setEncoding('utf-8');
 		res.on('data', function(data) {
-		    console.log('e: ' + data);
+		    text += data;
+		});
+		res.on('end', function() {
+		    var msg = 'HTTP ' + res.statusCode;
+		    if (text)
+			msg += ': ' + text;
+		    cb(new Error(msg));
 		});
 	    }
 	});

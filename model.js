@@ -76,7 +76,8 @@ console.log({pending:pending});
 		  if (pending > 0)
 		      return;
 
-		  cb.apply(db, arguments);
+		  if (cb)
+		      cb.apply(db, arguments);
 
 		  var updateQueue = onUpdateQueue;
 		  onUpdateQueue = [];
@@ -99,7 +100,6 @@ console.log({getEntriesSince:since});
 		  var entry;
 		  try {
 		      entry = JSON.parse(row.content);
-console.log({eP:entry.published});
 		      /* Save bandwidth for this request: */
 		      delete entry.content;
 		      delete entry.summary;

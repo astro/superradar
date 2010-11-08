@@ -50,7 +50,29 @@ function onEntries(entries) {
 	      updateQueueTrigger);
 }
 
+function subscribe(url, token, secret, cb) {
+  atom.fetch(url, function(err, tree) {
+console.log({fetch:[err&&err.stack,tree&&tree.toString()]});
+    var hub = config.superHub;  // default
+    if (tree) {
+      // find new hubs
+      tree.getChildren('link').forEach(function(link) {
+	if (link.attrs.rel === 'hub') {
+console.log({link:link});
+	  hub = link.attrs.href;
+	}
+      });
+      // pre-fill archive
+      process.nextTick(function() {
+	var feed = atom.extractFeed(tree);
+	model.addEntries(feed.entries);
+      });
+    }
 
+    pshb.subscribe(hub, url, hubUrl,
+		   token, secret, cb);
+  });
+}
 
 function pshbCheckSubscription(subscribed, url, token, cb) {
     model.getSubscription(url, function(feed) {
@@ -101,8 +123,7 @@ function app(app) {
 		console.log({url:url});
 		model.addSubscription(url, 'foobar', 'quux', function(err) {
 		    if (!err)
-			pshb.subscribe(config.superHub, url, hubUrl,
-				       'foobar', 'quux', function(err) {
+			subscribe(url, 'foobar', 'quux', function(err) {
 			    res.writeHead(err ? 500 : 200, {});
 			    res.end(err && err.message);
 			});
