@@ -1,6 +1,6 @@
 body {
   background-color: white;
-  background-image: -webkit-gradient(linear, top left, bottom left, 
+  background-image: -webkit-gradient(linear, left top, left bottom, 
     color-stop(0, rgb(189,189,189)),
     color-stop(0.2, rgb(255,255,255)),
     color-stop(1.0, rgb(255,255,255))
@@ -106,4 +106,38 @@ a:hover {
 .entry .links a:hover {
   color: white;
   background-color: #666;
+}
+.entry img {
+  max-width: 37em;
+}
+
+#adder {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 0.2em 0.4em 0.25em;
+  margin: 0;
+  border-bottom-left-radius: 1em;
+  -moz-border-radius-bottomleft: 1em;
+  -webkit-border-bottom-left-radius: 1em;
+  background-color: white;
+  opacity: 0.5;
+  box-shadow: #333 0 0 8px;
+  -moz-box-shadow: #333 0 0 8px;
+  -webkit-box-shadow: #333 0 0 8px;
+}
+#adder:hover {
+  opacity: 1.0;    
+}
+#adder #plus {
+  font-weight: bold;
+  cursor: pointer;
+}
+#adder input {
+  border: 1px solid #ccc;
+}
+#adder input:focus {
+  box-shadow: #fc7 0 0 2px;
+  -moz-box-shadow: #fc7 0 0 2px;
+  -webkit-box-shadow: #fc7 0 0 2px;
 }

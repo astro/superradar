@@ -215,6 +215,9 @@ function insertStatusParagraph(status) {
 }
 
 function subscribe(url) {
+  if (!url)
+    return;
+
   var status = insertStatusParagraph('Subscribing to ' + url);
 
   $.ajax({ url: '/subscribe',
@@ -238,9 +241,10 @@ function setupAdmin() {
 	       return;
 	     $('<p id="adder"><span id="plus">+</span></p>').insertBefore('h1');
 	     $('#plus').click(function() {
-				if ($('#subscribe').length > 0)
+				if ($('#subscribe').length > 0) {
 				  $('#subscribe').remove();
-				else {
+				  $('#adder #plus').show();
+				} else {
 				  var input = $('<input/>', { id: 'subscribe',
 							      size: 40 });
 				  input.keypress(function(ev) {
@@ -248,9 +252,12 @@ function setupAdmin() {
 						     ev.preventDefault();
 						     subscribe(input.val());
 						     $('#subscribe').remove();
+						     $('#adder #plus').show();
 						   }
 						 });
 				  $('#adder').prepend(input);
+				  input.focus();
+				  $('#adder #plus').hide();
 				}
 			      });
 	   }
